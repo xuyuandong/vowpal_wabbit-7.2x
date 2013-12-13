@@ -1,0 +1,12 @@
+#!/bin/sh
+# A simplest-possible example of parallel code at work on a single machine.
+#./spanning_tree
+# This isn't actually useful---to do something useful, you would need to partition the dataset amongst the VW instances
+#../vowpalwabbit/vw --total 2 --node 0 --unique_id 0 -d ../test/train-sets/0001.dat --span_server localhost > node_0 2>&1 &
+#../vowpalwabbit/vw --total 2 --node 1 --unique_id 0 -d ../test/train-sets/0001.dat --span_server localhost 
+dataset=../test/train-sets
+gdcmd1="../vowpalwabbit/vw -b 24 --total 2 --node 0 --unique_id 0 --cache_file temp.cache --passes 2 --l2=1 --adaptive --exact_adaptive_norm -d $dataset/0001.dat --span_server localhost --loss_function=logistic" 
+gdcmd2="../vowpalwabbit/vw -b 24 --cache_file temp.cache2 --passes 2 --l2=1 --adaptive --exact_adaptive_norm -d $dataset/0001.dat -f tm --readable_model rm --loss_function=logistic" 
+#$gdcmd1 >node0 2>&1 &
+$gdcmd2
+#killall spanning_tree
