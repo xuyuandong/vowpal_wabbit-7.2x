@@ -474,6 +474,22 @@ namespace OWLQN {
     } // end for
   }
 
+  // add by x
+  void update_solution(vw& all, bfgs& b) {
+    size_t length = all.stride * (((size_t)1) << all.num_bits);
+    double avg_loss = b.loss_sum / b.importance_weight_sum;
+    if (avg_loss < all.reg.best_loss) {
+      all.reg.backup(length);
+      all.reg.best_loss = avg_loss;
+    }
+  }
+  // add by x
+  void write_solution(vw& all, bfgs& b) {
+    fprintf(stdout, "write solution, optimal(maybe not best) loss:%5.6f\n", all.reg.best_loss);
+    size_t length = all.stride * (((size_t)1) << all.num_bits);
+    all.reg.restore(length);
+  }
+
   int process_pass(vw& all, bfgs& b) {
     fprintf(stderr, "\n******************current_pass = %u *********************\n", 
         (unsigned int) b.current_pass);
@@ -534,6 +550,9 @@ namespace OWLQN {
       double wolfe1;
       double new_step = wolfe_eval(all, b, b.mem, b.loss_sum, b.previous_loss_sum, 
           b.step_size, b.importance_weight_sum, b.origin, wolfe1);
+
+      // add by x : record best solution 
+      update_solution(all, b); // add by x
 
       /********************************************************************/
       /* B0) DERIVATIVE ZERO: MINIMUM FOUND *******************************/
@@ -750,10 +769,15 @@ namespace OWLQN {
           "", read,
           buff, text_len, text);
 
-      if (reg_vector)
+      // add by x : we replace current state by best solution
+      write_solution(*all, *b); // add by x
+      if (reg_vector) {
+        cout << "bfgs::save_load_regularizer" << endl;
         save_load_regularizer(*all, *b, model_file, read, text);
-      else
+      } else {
+	cout << "GD::save_load_regressor" << endl;
         GD::save_load_regressor(*all, model_file, read, text);
+      }
     }
   }
 
@@ -771,6 +795,7 @@ namespace OWLQN {
         if (ec->pass <= final_pass) {
           if (ec->pass != b->current_pass) {
             int status = process_pass(*all, *b);
+            fprintf(stdout, "%2d best_loss=%10.6f\n", b->current_pass, all->reg.best_loss); // add by x
             if (status != LEARN_OK && final_pass > b->current_pass) {
               final_pass = b->current_pass;
             }
@@ -782,6 +807,7 @@ namespace OWLQN {
 
       } else if (parser_done(all->p)) {
         process_pass(*all, *b);
+        fprintf(stdout, "%2d best_loss=%10.6f\n", b->current_pass, all->reg.best_loss); // add by x
         return;
       }
       else 

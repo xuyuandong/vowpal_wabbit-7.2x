@@ -12,6 +12,7 @@ using namespace std;
 #endif
 #include <stdlib.h>
 #include <stdint.h>
+#include <float.h>
 #include <math.h>
 #include <algorithm>
 #include "parse_regressor.h"
@@ -29,6 +30,8 @@ void initialize_regressor(vw& all)
   size_t length = ((size_t)1) << all.num_bits;
   all.weight_mask = (all.stride * length) - 1;
   all.reg.weight_vector = (weight *)calloc(all.stride*length, sizeof(weight));
+  all.reg.best_vector = (weight *)calloc(all.stride*length, sizeof(weight)); // add by x
+  all.reg.best_loss = DBL_MAX; // add by x
   if (all.reg.weight_vector == NULL)
   {
     cerr << all.program_name << ": Failed to allocate weight array with " << all.num_bits << " bits: try decreasing -b <bits>" << endl;

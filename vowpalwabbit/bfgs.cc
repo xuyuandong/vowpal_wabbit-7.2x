@@ -611,6 +611,22 @@ void update_weight(vw& all, float step_size, size_t current_pass)
       w[W_XT] += step_size * w[W_DIR];
   }
 
+// add by x
+void update_solution(vw& all, bfgs& b) {
+  size_t length = all.stride * (((size_t)1) << all.num_bits);
+  double avg_loss = b.loss_sum / b.importance_weight_sum;
+  if (avg_loss < all.reg.best_loss) {
+    all.reg.backup(length);
+    all.reg.best_loss = avg_loss;
+  }
+}
+// add by x
+void write_solution(vw& all, bfgs& b) {
+  fprintf(stdout, "write solution, optimal(maybe not best) loss:%5.6f\n", all.reg.best_loss);
+  size_t length = all.stride * (((size_t)1) << all.num_bits);
+  all.reg.restore(length);
+}
+
 int process_pass(vw& all, bfgs& b) {
   int status = LEARN_OK;
 
@@ -633,7 +649,7 @@ int process_pass(vw& all, bfgs& b) {
       if (all.l2_lambda > 0.)
 	b.loss_sum += add_regularization(all, b, all.l2_lambda);
       if (!all.quiet)
-	fprintf(stderr, "%2lu %-10.5f\t", (long unsigned int)b.current_pass+1, b.loss_sum / b.importance_weight_sum);
+	fprintf(stderr, "%2lu %-10.6f\t", (long unsigned int)b.current_pass+1, b.loss_sum / b.importance_weight_sum);
       
       b.previous_loss_sum = b.loss_sum;
       b.loss_sum = 0.;
@@ -651,7 +667,8 @@ int process_pass(vw& all, bfgs& b) {
 	if (!all.quiet)
 	  fprintf(stderr, "%-10s\t%-10.5f\t%-10.5f\n", "", d_mag, b.step_size);
 	b.predictions.erase();
-	update_weight(all, b.step_size, b.current_pass);		     		           }
+	update_weight(all, b.step_size, b.current_pass);		     		   
+      }
     }
     else
   /********************************************************************/
@@ -667,10 +684,12 @@ int process_pass(vw& all, bfgs& b) {
 		  if (all.l2_lambda > 0.)
 		    b.loss_sum += add_regularization(all, b, all.l2_lambda);
 		  if (!all.quiet)
-		    fprintf(stderr, "%2lu %-10.5f\t", (long unsigned int)b.current_pass+1, b.loss_sum / b.importance_weight_sum);
+		    fprintf(stderr, "%2lu %-10.6f\t", (long unsigned int)b.current_pass+1, b.loss_sum / b.importance_weight_sum);
 
 		  double wolfe1;
 		  double new_step = wolfe_eval(all, b, b.mem, b.loss_sum, b.previous_loss_sum, b.step_size, b.importance_weight_sum, b.origin, wolfe1);
+                  
+                  update_solution(all, b); // add by x
 
   /********************************************************************/
   /* B0) DERIVATIVE ZERO: MINIMUM FOUND *******************************/
@@ -967,11 +986,15 @@ void save_load(void* in, void* d, io_buf& model_file, bool read, bool text)
       bin_text_read_write_fixed(model_file,(char *)&reg_vector, sizeof (reg_vector),
 				"", read,
 				buff, text_len, text);
-      
-      if (reg_vector)
+
+      write_solution(*all, *b); // add by x
+      if (reg_vector) {
+        cout << "bfgs::save_load_regularizer" << endl;
 	save_load_regularizer(*all, *b, model_file, read, text);
-      else
+      } else {
+	cout << "GD::save_load_regressor" << endl;
 	GD::save_load_regressor(*all, model_file, read, text);
+      }
     }
 }
 
@@ -995,7 +1018,8 @@ void drive(void* in, void* d)
 	  if (ec->pass<=final_pass) {
 	    if (ec->pass != b->current_pass) {
 	      int status = process_pass(*all, *b);
-	      if (status != LEARN_OK && final_pass>b->current_pass) {
+              fprintf(stdout, "%2d best_loss=%10.6f\n", b->current_pass, all->reg.best_loss); // add by x
+	      if (status != LEARN_OK && final_pass > b->current_pass) {
 		final_pass = b->current_pass;
 	      }
 	      if (b->output_regularizer && b->current_pass==final_pass) {
@@ -1011,6 +1035,7 @@ void drive(void* in, void* d)
       else if (parser_done(all->p))
 	{
 	  process_pass(*all, *b);
+          fprintf(stdout, "%2d best_loss=%10.6f\n", b->current_pass, all->reg.best_loss); // add by x
 	  return;
 	}
       else 

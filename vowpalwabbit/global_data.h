@@ -110,6 +110,15 @@ typedef float weight;
 
 struct regressor {
   weight* weight_vector;
+  // best parameter
+  weight* best_vector;
+  double best_loss;
+  void backup(size_t n) {
+    memcpy(best_vector, weight_vector, n);
+  }
+  void restore(size_t n) {
+    memcpy(weight_vector, best_vector, n);
+  }
 };
            
 struct vw {
