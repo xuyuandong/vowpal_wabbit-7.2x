@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
   
   ftime(&t_end);
   double net_time = (int) (1000.0 * (t_end.time - t_start.time) + (t_end.millitm - t_start.millitm)); 
-  if(!all.quiet && all.span_server != "")
+  if(!all.quiet)
     cerr<<"Net time taken by process = "<<net_time/(double)(1000)<<" seconds\n";
 
   if(all.span_server != "") {

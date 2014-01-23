@@ -23,6 +23,7 @@
 #include "searn.h"
 #include "bfgs.h"
 #include "owlqn.h"
+#include "ftrl_proximal.h"
 #include "lda_core.h"
 #include "noop.h"
 #include "gd_mf.h"
@@ -68,6 +69,9 @@ vw parse_args(int argc, char *argv[])
      "number of bits in the feature table")
     ("bfgs", "use bfgs optimization")
     ("owlqn", "use owlqn optimization")
+    ("ftrl", "use ftrl-proximal optimization")
+    ("ftrl_alpha", po::value<float>(), "learning rate for ftrl-proximal optimization")
+    ("progressive_validation", po::value<string>(), "file to record progressive validation for ftrl-proximal")
     ("cache,c", "Use a cache.  The default is <data>.cache")
     ("cache_file", po::value< vector<string> >(), "The location(s) of cache_file.")
     ("compressed", "use gzip format whenever possible. If a cache file is being created, this option creates a compressed cache file. A mixture of raw-text & compressed inputs are supported with autodetection.")
@@ -247,6 +251,12 @@ vw parse_args(int argc, char *argv[])
 
   if (vm.count("owlqn"))
     OWLQN::parse_args(all, to_pass_further, vm, vm_file);
+  
+  if (vm.count("ftrl")) {
+    cout << "parse ftrl " << endl;
+    FTRL::parse_args(all, to_pass_further, vm, vm_file);
+    cout << "parse ftrl ok" << endl;
+  }
 
   if (vm.count("version") || argc == 1) {
     /* upon direct query for version -- spit it out to stdout */

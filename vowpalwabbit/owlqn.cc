@@ -3,10 +3,6 @@
    individual contributors. All rights reserved.  Released under a BSD (revised)
    license as described in the file LICENSE.
    */
-/*
-   The algorithm here is generally based on Nocedal 1980, Liu and Nocedal 1989.
-   Implementation by Miro Dudik.
-   */
 #include <fstream>
 #include <float.h>
 #ifndef _WIN32
@@ -19,7 +15,7 @@
 #include "parse_example.h"
 #include "constant.h"
 #include "sparse_dense.h"
-#include "bfgs.h"
+#include "owlqn.h"
 #include "cache.h"
 #include "simple_label.h"
 #include "accumulate.h"
@@ -108,6 +104,20 @@ namespace OWLQN {
       weights[stride*i + W_GT] = 0;
   }
 
+  void zero_state(vw& all) {
+    uint32_t length = 1 << all.num_bits;
+    size_t stride = all.stride;
+    weight* weights = all.reg.weight_vector;
+    for(uint32_t i = 0; i < length; i++) {
+      weights[stride*i + W_GT] = 0;
+      weights[stride*i + W_DIR] = 0;
+      weights[stride*i + W_PGT] = 0;
+      weights[stride*i + W_OT] = 0;
+      weights[stride*i + W_XP] = 0;
+      //weights[stride*i + W_COND] = 0;
+    }
+  }
+  
   void reset_state(vw& all, bfgs& b, bool zero) {
     b.lastj = b.origin = 0;
     b.loss_sum = b.previous_loss_sum = 0.;
@@ -115,7 +125,8 @@ namespace OWLQN {
     b.first_pass = true;
     b.gradient_pass = true;
     if (zero) {
-      zero_derivative(all);
+      zero_state(all);
+      //zero_derivative(all);
     }
   }
 
@@ -356,20 +367,6 @@ namespace OWLQN {
       weights[W_XP] = weights[W_XT];
     }
   } 
-
-  void zero_state(vw& all) {
-    uint32_t length = 1 << all.num_bits;
-    size_t stride = all.stride;
-    weight* weights = all.reg.weight_vector;
-    for(uint32_t i = 0; i < length; i++) {
-      weights[stride*i + W_GT] = 0;
-      weights[stride*i + W_DIR] = 0;
-      weights[stride*i + W_PGT] = 0;
-      weights[stride*i + W_OT] = 0;
-      weights[stride*i + W_XP] = 0;
-      //weights[stride*i + W_COND] = 0;
-    }
-  }
 
   void select_orthant(vw& all) {
     uint32_t length = 1 << all.num_bits;
