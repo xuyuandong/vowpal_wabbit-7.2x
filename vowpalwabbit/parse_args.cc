@@ -252,11 +252,8 @@ vw parse_args(int argc, char *argv[])
   if (vm.count("owlqn"))
     OWLQN::parse_args(all, to_pass_further, vm, vm_file);
   
-  if (vm.count("ftrl")) {
-    cout << "parse ftrl " << endl;
+  if (vm.count("ftrl"))
     FTRL::parse_args(all, to_pass_further, vm, vm_file);
-    cout << "parse ftrl ok" << endl;
-  }
 
   if (vm.count("version") || argc == 1) {
     /* upon direct query for version -- spit it out to stdout */

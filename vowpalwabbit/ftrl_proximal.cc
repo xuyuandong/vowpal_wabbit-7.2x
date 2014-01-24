@@ -179,12 +179,12 @@ namespace FTRL {
     ftrl* b = (ftrl*)d;
 
     assert(ec->in_use);
-    // update weight
-    update_weight(*all, *b, ec);
     // predict w*x, compute gradient, update accumulate state
     predict_and_gradient(*all, *b, ec);
     // evaluate, statistic
     evaluate_example(*all, *b, ec);
+    // update weight
+    update_weight(*all, *b, ec);
   }
 
   void save_load_online_state(vw& all, io_buf& model_file, bool read, bool text) {
@@ -205,7 +205,6 @@ namespace FTRL {
     text_len = sprintf(buff, "total_features %u\n", (uint32_t)all.sd->total_features);
     bin_text_read_write_fixed(model_file,(char*)&all.sd->total_features, sizeof(all.sd->total_features),  "", read, buff, text_len, text);
 
-    //TODO: save w[W_XT], w[W_ZT], w[W_G2] if any of them is not zero
     uint32_t length = 1 << all.num_bits;
     uint32_t stride = all.stride;
     uint32_t i = 0;
@@ -223,6 +222,7 @@ namespace FTRL {
         }
       }
       else { // write binary or text
+        // save w[W_XT], w[W_ZT], w[W_G2] if any of them is not zero
         v = &(all.reg.weight_vector[stride*i]);
         if (v[W_XT] !=0. || v[W_ZT] !=0. || v[W_G2] !=0.) {
           text_len = sprintf(buff, "%d", i);
@@ -244,13 +244,6 @@ namespace FTRL {
     vw* all = (vw*)in;
     if (read) {
       initialize_regressor(*all);
-      if (all->adaptive && all->initial_t > 0) {
-        uint32_t length = 1 << all->num_bits;
-        uint32_t stride = all->stride;
-        for (size_t j = 1; j < stride*length; j+=stride) {
-          all->reg.weight_vector[j] = all->initial_t;   //for adaptive update, we interpret initial_t as previously seeing initial_t fake datapoints, all with squared gradient=1
-        }
-      }
     } 
 
     if (model_file.files.size() > 0) {
@@ -260,12 +253,12 @@ namespace FTRL {
       bin_text_read_write_fixed(model_file,(char *)&resume, sizeof (resume), "", read, buff, text_len, text);
 
       if (resume) {
-        //TODO:
         save_load_online_state(*all, model_file, read, text);
       } else {
         GD::save_load_regressor(*all, model_file, read, text);
       }
     }
+
   }
 
   void finish(void* a, void* d) {
@@ -280,10 +273,6 @@ namespace FTRL {
     vw* all = (vw*)in;
     example* ec = NULL;
       
-    if (!all->save_resume) {
-      reset_state(*all);
-    }
-
     while ( true ) {
       if ((ec = get_example(all->p)) != NULL) { //semiblocking operation.
         learn(all, data, ec);
